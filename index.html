@@ -1,122 +1,41 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>反直覺播音器 - GitHub Pages 版</title>
-    <style>
-        :root {
-            --primary: #6366f1;
-            --bg: #0f172a;
-            --card: #1e293b;
-            --text: #f8fafc;
+<audio id="audioEngine" preload="auto">
+    <source src="https://actions.google.com/sounds/v1/ambient/creaky_door_spooky_mystery.ogg" type="audio/ogg">
+    <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
+    您的瀏覽器不支援音訊播放。
+</audio>
+
+<script>
+    const audio = document.getElementById('audioEngine');
+    const slider = document.getElementById('seekSlider');
+    const status = document.getElementById('status');
+
+    // 增加一個檢查，確保音檔載入成功
+    audio.addEventListener('canplaythrough', () => {
+        console.log("音檔已就緒");
+        status.innerText = "系統就緒，請滑動拉桿開始播放";
+    });
+
+    audio.addEventListener('error', (e) => {
+        console.error("音檔載入失敗", e);
+        status.innerText = "音源載入失敗，請檢查網路或更換連結";
+        status.style.color = "#ef4444";
+    });
+
+    // 連續控制邏輯
+    slider.addEventListener('input', () => {
+        if (audio.paused) {
+            // 嘗試播放，捕捉瀏覽器可能的封鎖錯誤
+            audio.play().catch(err => {
+                status.innerText = "請先點擊頁面任何地方以允許播放";
+            });
         }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
+        
+        if (audio.duration) {
+            const targetTime = (slider.value / 100) * audio.duration;
+            audio.currentTime = targetTime;
+            status.innerText = `播放中: ${Math.floor(slider.value)}%`;
         }
+    });
 
-        .player-card {
-            background: var(--card);
-            padding: 2.5rem;
-            border-radius: 20px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
-            width: 100%;
-            max-width: 400px;
-            text-align: center;
-        }
-
-        h2 { margin-bottom: 2rem; font-weight: 300; letter-spacing: 1px; }
-
-        .control-group {
-            margin-bottom: 3rem;
-            text-align: left;
-        }
-
-        label {
-            display: block;
-            font-size: 0.8rem;
-            color: #94a3b8;
-            margin-bottom: 15px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        /* 連續控制：播放/進度/停止 */
-        input[type="range"] {
-            -webkit-appearance: none;
-            width: 100%;
-            background: #334155;
-            height: 8px;
-            border-radius: 5px;
-            outline: none;
-        }
-
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 20px;
-            height: 20px;
-            background: var(--primary);
-            border-radius: 50%;
-            cursor: pointer;
-            box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
-        }
-
-        /* 離散控制：音量按鈕 */
-        .discrete-box {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
-        }
-
-        .volume-btn {
-            background: #334155;
-            border: none;
-            color: white;
-            padding: 10px 0;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-size: 0.7rem;
-        }
-
-        .volume-btn.active {
-            background: var(--primary);
-            box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
-        }
-
-        .status-display {
-            margin-top: 20px;
-            font-family: monospace;
-            color: #22c55e;
-            background: rgba(34, 197, 94, 0.1);
-            padding: 5px;
-            border-radius: 4px;
-        }
-    </style>
-</head>
-<body>
-
-<div class="player-card">
-    <h2>DISS-ORDER Player</h2>
-
-    <div class="control-group">
-        <label>連續控制：滑動以播放 / 暫停 / 跳轉</label>
-        <input type="range" id="seekSlider" value="0" min="0" max="100" step="0.01">
-        <div style="display:flex; justify-content: space-between; margin-top: 8px; font-size: 0.7rem; color: #64748b;">
-            <span>停止 (0%)</span>
-            <span>結尾 (100%)</span>
-        </div>
-    </div>
-
-    <div class="control-group">
-        <label>離散控制：音量等級</label>
-        <div class="discrete-box" id="volumeGroup">
-            <button class="volume-btn" onclick="setVol(0, 0)">靜音
+    // ... 其餘邏輯保持不變 ...
+</script>
