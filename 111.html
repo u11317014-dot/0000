@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>邏輯反轉播音器 2.0</title>
+    <style>
+        :root { --bg: #0f172a; --accent: #38bdf8; --text: #f8fafc; }
+        body { background: var(--bg); color: var(--text); font-family: system-ui; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: #1e293b; padding: 2rem; border-radius: 24px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); width: 320px; border: 1px solid #334155; }
+        h1 { font-size: 1.2rem; text-align: center; color: var(--accent); margin-top: 0; }
+        
+        .control-group { background: #0f172a; padding: 15px; border-radius: 16px; margin-bottom: 20px; }
+        .label { font-size: 0.75rem; font-weight: bold; text-transform: uppercase; color: #94a3b8; display: block; margin-bottom: 10px; }
+
+        /* 播放：連續控制（油門感） */
+        #gas-pedal {
+            width: 100%; height: 60px; border: none; background: #334155; color: white;
+            border-radius: 12px; cursor: pointer; transition: all 0.1s; font-weight: bold;
+        }
+        #gas-pedal:active { background: var(--accent); transform: scale(0.98); color: #0f172a; }
+
+        /* 進度：連續控制（摩擦感） */
+        #scrub-bar { width: 100%; cursor: ew-resize; accent-color: var(--accent); }
+
+        /* 音量：離散控制（切換開關） */
+        .discrete-box { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+        .v-toggle {
+            background: #334155; border: 2px solid transparent; color: white;
+            padding: 8px; border-radius: 8px; cursor: pointer; font-size: 0.7rem;
+        }
+        .v-toggle.active { background: #0ea5e9; border-color: white; font-weight: bold; }
+
+        /* 頻譜儀視覺化 */
+        #visualizer { width: 100%; height: 40px; background: #000; border-radius: 4px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1>INVERSION PLAYER</h1>
+    
+    <canvas id="visualizer"></canvas>
+
+    <div class="control-group">
+        <span class="label">連續控制：播放油門</span>
+        <button id="gas-pedal">HOLD TO PLAY</button>
+    </div>
+
+    <div class="control-group">
+        <span class="label">連續控制：手動進度摩擦</span>
+        <input type="range" id="scrub-bar" min="0" max="100" value="0">
+    </div>
+
+    <div class="control-group">
+        <span class="label">離散控制：音量檔位</span>
+        <div class="discrete-box">
+            <button class="v-toggle" onclick="setVol(0, this)">MUTE</button>
+            <button class="v-toggle active" onclick="setVol(0.5, this)">MID</button>
+            <button class="v-toggle" onclick="setVol(1.0, this)">MAX</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 使用 Web Audio API 生成聲音，解決來源失效與自動播放問題
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let oscillator = null;
+    let gainNode = audioCtx.createGain();
+    let isPlaying = false;
+    let currentFreq = 440;
+    
+    gainNode.connect(audioCtx.destination);
+    gainNode.gain.value = 0.5;
+
+    const pedal = document.getElementById('gas-pedal');
+    const scrub = document.getElementById('scrub-bar');
+    const canvas = document.getElementById('visualizer');
+    const ctx = canvas.getContext('2d');
+
+    // --- 連續控制 1：播放（按住才響） ---
+    const startSound = () => {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        oscillator = audioCtx.createOscillator();
+        oscillator.type = 'sawtooth'; // 鋸齒波，比較有現代感
+        oscillator.frequency.setValueAtTime(currentFreq, audioCtx.currentTime);
+        oscillator.connect(gainNode);
+        oscillator.start();
+        isPlaying = true;
+    };
+
+    const stopSound = () => {
+        if (oscillator) {
+            oscillator.stop();
+            oscillator.disconnect();
+        }
+        isPlaying = false;
+    };
+
+    pedal.addEventListener('mousedown', startSound);
+    pedal.addEventListener('mouseup', stopSound);
+    pedal.addEventListener('mouseleave', stopSound);
+
+    // --- 連續控制 2：頻率/進度（滑動改變音調） ---
+    // 在這個實驗中，我們把「進度」改為「連續改變頻率」來模擬進度滑動的體感
+    scrub.addEventListener('input', (e) => {
+        currentFreq = 200 + (e.target.value * 8); 
+        if (oscillator) {
+            oscillator.frequency.setTargetAtTime(currentFreq, audioCtx.currentTime, 0.05);
+        }
+    });
+
+    // --- 離散控制 3：音量（固定檔位） ---
+    window.setVol = (val, btn) => {
+        gainNode.gain.setTargetAtTime(val, audioCtx.currentTime, 0.1);
+        document.querySelectorAll('.v-toggle').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    };
+
+    // 簡易視覺化渲染
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (isPlaying) {
+            ctx.fillStyle = '#38bdf8';
+            for (let i = 0; i < canvas.width; i += 4) {
+                const h = Math.random() * 20 + 5;
+                ctx.fillRect(i, canvas.height - h, 2, h);
+            }
+        }
+        requestAnimationFrame(draw);
+    }
+    draw();
+</script>
+</body>
+</html>
